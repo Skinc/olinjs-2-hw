@@ -1,0 +1,102 @@
+
+/**
+ * Module dependencies.
+ */
+
+var express = require('express')
+  , routes = require('./routes')
+  , user = require('./routes/user')
+  , http = require('http')
+  , path = require('path');
+
+var app = express();
+
+var mongoose = require('mongoose');
+// new code here
+mongoose.connect(process.env.MONGOLAB_URI || 'localhost');
+
+var schema = mongoose.Schema({ name: String, age: Number, colors: String });
+var Cat = mongoose.model('Cat', schema);
+
+
+
+app.configure(function(){
+  app.set('port', process.env.PORT || 3000);
+  app.set('views', __dirname + '/views');
+  app.set('view engine', 'jade');
+  app.use(express.favicon());
+  app.use(express.logger('dev'));
+  app.use(express.bodyParser());
+  app.use(express.methodOverride());
+  app.use(app.router);
+  app.use(express.static(path.join(__dirname, 'public')));
+});
+
+app.configure('development', function(){
+  app.use(express.errorHandler());
+});
+
+app.get('/', routes.index);
+app.get('/users', user.list);
+
+function namecat(){
+	var cons = "bcdfghjklmnpqrstvwxz"; 
+	var vow = "aeiouy";
+	return cons.charAt(Math.floor(Math.random()*20)) + vow.charAt(Math.floor(Math.random()*6)) + cons.charAt(Math.floor(Math.random()*20)) + vow.charAt(Math.floor(Math.random()*6));
+}
+
+function getcolors(){
+	var colors = ["Black" , "White", "Orange", "Pink", "Brown", "Grey", "Tan"]
+	var coat = colors[Math.floor(Math.random()*colors.length)];		
+	return coat
+}
+
+
+// creates a new cat. Cats have a random age, a list of colors, and a name. Don't hardcode these values.
+app.get('/cats/new', function(req, res){
+    var KittyCat = new Cat({ name: namecat(), age: Math.floor(Math.random()*20), colors: getcolors() });
+    KittyCat.save(function (err) {
+    if (err) 
+	   console.log("error", err);
+    res.send("You have made a wonderful " + KittyCat.age + " year old cat named " + KittyCat.name + ".");
+  });
+});
+
+
+//shows a sorted list of cats by age. This should display their names, colors, and age
+app.get('/cats', function(req, res){
+	Cat.find({}).sort("-age").exec(function(err, cats) {
+		res.render('cats', { cats: cats, title: "Meet the Cats!"  });
+	}); 
+ 
+
+});
+
+//where :color is a parameter, such as "orange" or "grey". It shows a sorted list of cats by age that have that specific color
+app.get('/cats/color/:color', function(req, res){
+    var color = req.params.color;
+    Cat.find({colors: color}).sort("-age").exec(function(err, cats) {
+		
+	res.render('cats', { cats: cats, title: "Meet the Cats!" });
+    }); 
+});
+
+//deletes the oldest cat :c The cat should no longer appear on any lists
+app.get('/cats/delete/old', function(req, res){
+	Cat.find({}).sort("-age").exec(function(err, cats) {
+		message = "In sadness, we must inform you that " + cats[0].name + " has left us. Sad day."		
+		res.send(message)		
+		cats[0].remove()	
+	}); 
+});
+
+
+
+http.createServer(app).listen(app.get('port'), function(){
+  console.log("Express server listening on port " + app.get('port'));
+});
+
+
+
+
+

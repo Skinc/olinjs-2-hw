@@ -1,0 +1,8 @@
+extends layout
+
+block content
+  h1 Meet the Cats!
+  div
+    each cat, i in cats
+      div(value=cat) 
+        #{cat.name} #{cat.name} is a #{cat.age} year old #{cat.colors} cat 
